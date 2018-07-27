@@ -27,27 +27,24 @@ Check out [the demo](https://tucsky.github.io/SignificantTrades/)
 git clone https://github.com/Tucsky/SignificantTrades
 ```
 
-2. Install server dependencies & run it
+2. Install server dependencies
 
 ```bash
-cd server
-npm install
-node index
+Run "Run First.bat"
 ```
 
 3. Install client dependencies then run
 
 ```bash
-cd client
-npm install
-npm run dev
+Run "Run Second.bat"
 ```
 
-4. Open a browser window at localhost:8080
+4. Run Open Server.bat in server folder, Run Open Client.bat in Client Folder
 
+5. Open a browser window at localhost:8080
 ...
 
-5. Profit !
+6. Profit !
 
 ## Configuration
 
