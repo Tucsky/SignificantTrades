@@ -37,6 +37,7 @@ Run "Run First.bat"
 
 ```bash
 Run "Run Second.bat"
+Remove the "Example" From config name in server folder
 ```
 
 4. Run Open Server.bat in server folder, Run Open Client.bat in Client Folder
