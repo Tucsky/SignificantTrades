@@ -1,1 +1,1 @@
-npm run dev
+cmd /k npm run dev
