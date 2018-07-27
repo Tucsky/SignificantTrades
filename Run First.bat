@@ -1,3 +1,3 @@
 cd server
-npm install
-node index
+pause
+cmd/k npm install
