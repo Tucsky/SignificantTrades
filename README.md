@@ -31,13 +31,13 @@ git clone https://github.com/Tucsky/SignificantTrades
 
 ```bash
 Run "Run First.bat"
+Remove the "Example" From config name in server folder
 ```
 
 3. Install client dependencies then run
 
 ```bash
 Run "Run Second.bat"
-Remove the "Example" From config name in server folder
 ```
 
 4. Run Open Server.bat in server folder, Run Open Client.bat in Client Folder
