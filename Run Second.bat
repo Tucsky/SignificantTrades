@@ -1,3 +1,3 @@
 cd client
-npm install
-npm run dev
+pause
+cmd /k npm install
