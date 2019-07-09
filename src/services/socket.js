@@ -112,6 +112,19 @@ const emitter = new Vue({
 
         trades = trades.sort((a, b) => a[1] - b[1])
 
+        self= this
+        trades.forEach((trade) => {
+          if(self.lastPrice) {
+            //buy trade making upMove -> positive
+            //sell trade making downMove -> positive
+            //otherwise -> "against" the trade -> negative
+            trade[6] = (trade[2] - self.lastPrice)*(trade[4] > 0 ? 1:-1)
+          } else {
+            trade[6] = 0 //otherwise its NaN ... not so good
+          }
+          self.lastPrice= trade[2]
+        })
+
         this.queue = this.queue.concat(trades)
 
         if (!this.isReplaying) {
@@ -331,6 +344,8 @@ const emitter = new Vue({
     emitTrades(trades, event = 'trades.instant') {
       let upVolume = 0
       let downVolume = 0
+      let upMove = 0
+      let downMove = 0
 
       const output = trades.filter((a) => {
         if (this.actives.indexOf(a[0]) === -1) {
