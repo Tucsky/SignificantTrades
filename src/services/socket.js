@@ -112,17 +112,16 @@ const emitter = new Vue({
 
         trades = trades.sort((a, b) => a[1] - b[1])
 
-        self= this
         trades.forEach((trade) => {
-          if(self.lastPrice) {
+          if(exchange.lastPrice) {
             //buy trade making upMove -> positive
             //sell trade making downMove -> positive
             //otherwise -> "against" the trade -> negative
-            trade[6] = (trade[2] - self.lastPrice)*(trade[4] > 0 ? 1:-1)
+            trade[6] = (trade[2] - exchange.lastPrice)*(trade[4] > 0 ? 1:-1)
           } else {
             trade[6] = 0 //otherwise its NaN ... not so good
           }
-          self.lastPrice= trade[2]
+          exchange.lastPrice= trade[2]
         })
 
         this.queue = this.queue.concat(trades)
