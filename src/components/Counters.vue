@@ -2,7 +2,7 @@
   <div id="counters" class="counters">
     <ul ref="countersList">
       <li
-        v-for="(sum, index) of stackedSums"
+        v-for="(obj, index) of stackedSums"
         :key="`sum-${index}`"
         v-if="!hideIncompleteCounter || index <= completed"
         class="counters__item"
@@ -17,19 +17,37 @@
             @output="updateCounterStep(index, $event)"
           ></editable>
         </div>
-        <div
-          class="counter__up"
-          :style="{ flexBasis: (sum[0] / (sum[0] + sum[1])) * 100 + '%' }"
-          :data-amount="$root.formatAmount(sum[0], 2)"
-        >
-          <div v-if="index === 0" class="counter__light"></div>
-        </div>
-        <div
-          class="counter__down"
-          :style="{ flexBasis: (sum[1] / (sum[0] + sum[1])) * 100 + '%' }"
-          :data-amount="$root.formatAmount(sum[1], 2)"
-        >
-          <div v-if="index === 0" class="counter__light"></div>
+        <div class="counter__row">
+          <div>
+            <div
+              class="counter__up"
+              :style="{ flexBasis: (obj.volumeUp / (obj.volumeUp+obj.volumeDown)) * 100 + '%' }"
+              :data-amount="$root.formatAmount(obj.volumeUp, 2)"
+            >
+              <div v-if="index === 0" class="counter__light"></div>
+            </div>
+            <div
+              class="counter__down"
+              :style="{ flexBasis: (obj.volumeDown / (obj.volumeUp+obj.volumeDown)) * 100 + '%' }"
+              :data-amount="$root.formatAmount(obj.volumeDown, 2)"
+            >
+              <div v-if="index === 0" class="counter__light"></div>
+            </div>
+          </div>
+          <div>
+            <div
+              class="counter__up"
+              :style="{ flexBasis: (obj.moveUp / (obj.moveUp+obj.moveDown)) * 100 + '%' }"
+              :data-amount="$root.formatAmount(obj.moveUp, 2)"
+            >
+            </div>
+            <div
+              class="counter__down"
+              :style="{ flexBasis: (obj.moveDown / (obj.moveUp+obj.moveDown)) * 100 + '%' }"
+              :data-amount="$root.formatAmount(obj.moveDown, 2)"
+            >
+            </div>
+          </div>
         </div>
         <div
           class="counter__delete icon-cross"
@@ -54,7 +72,7 @@ export default {
       stackedSums: [],
       counters: [],
       complete: 0,
-      queue: [0, 0],
+      queue: [0, 0, 0, 0],
       strength: [0, 0],
     }
   },
@@ -79,8 +97,8 @@ export default {
       for (let i = this.counters.length; i < this.countersSteps.length; i++) {
         this.labels.push(this.$root.ago(now - this.countersSteps[i]))
         this.counters.push([])
-        this.strictSums.push([0, 0])
-        this.stackedSums.push([0, 0])
+        this.strictSums.push([0, 0, 0, 0])
+        this.stackedSums.push({volumeUp:0,volumeDown:0,moveUp:0,moveDown:0})
       }
     }
 
@@ -145,28 +163,44 @@ export default {
 
       let upVolume = 0
       let downVolume = 0
+      let upMove = 0
+      let downMove = 0
 
       for (let index = 0; index < trades.length; index++) {
         if (trades[index][4] > 0) {
+          upMove += trades[index][6]
           upVolume += trades[index][3] * (this.preferQuoteCurrencySize ? trades[index][2] : 1)
         } else {
+          downMove += trades[index][6]
           downVolume += trades[index][3] * (this.preferQuoteCurrencySize ? trades[index][2] : 1)
         }
       }
 
       this.queue[0] += upVolume
       this.queue[1] += downVolume
+      this.queue[2] += upMove
+      this.queue[3] += downMove
 
       for (let index = 0; index < this.stackedSums.length; index++) {
         this.$set(
           this.stackedSums[index],
-          0,
-          this.stackedSums[index][0] + upVolume
+          "moveUp",
+          this.stackedSums[index].moveUp + upMove,
         )
         this.$set(
           this.stackedSums[index],
-          1,
-          this.stackedSums[index][1] + downVolume
+          "moveDown",
+          this.stackedSums[index].moveDown + downMove,
+        )
+        this.$set(
+          this.stackedSums[index],
+          "volumeUp",
+          this.stackedSums[index].volumeUp + upVolume,
+        )
+        this.$set(
+          this.stackedSums[index],
+          "volumeDown",
+          this.stackedSums[index].volumeDown + downVolume,
         )
 
         if (!this.cumulativeCounters) {
@@ -187,21 +221,25 @@ export default {
 
       const now = +new Date()
 
-      if (this.queue[0] || this.queue[1]) {
-        this.counters[0].push([now, this.queue[0], this.queue[1]])
-        this.strictSums[0][0] += this.queue[0]
-        this.strictSums[0][1] += this.queue[1]
-
-        this.queue[0] = this.queue[1] = 0
+      if (this.queue[0] || this.queue[1]|| this.queue[2]|| this.queue[3]) {
+        this.counters[0].push([now, this.queue[0], this.queue[1], this.queue[2], this.queue[3]])
+        for(var i=0; i < 4;++i) {
+          this.strictSums[0][i] += this.queue[i]
+          this.queue[i]=0
+        }
       }
 
       let stepIndex = 0
       let stackedUpVolume = 0
       let stackedDownVolume = 0
+      let stackedUpMove = 0
+      let stackedDownMove = 0
 
       for (let step of this.countersSteps) {
         let upVolume = 0
         let downVolume = 0
+        let upMove = 0
+        let downMove = 0
 
         let i
 
@@ -212,6 +250,8 @@ export default {
 
           upVolume += this.counters[stepIndex][i][1]
           downVolume += this.counters[stepIndex][i][2]
+          upMove += this.counters[stepIndex][i][3]
+          downMove += this.counters[stepIndex][i][4]
         }
 
         if (i > 0) {
@@ -219,11 +259,15 @@ export default {
 
           this.strictSums[stepIndex][0] -= upVolume
           this.strictSums[stepIndex][1] -= downVolume
+          this.strictSums[stepIndex][2] -= upMove
+          this.strictSums[stepIndex][3] -= downMove
 
           if (this.counters[stepIndex + 1]) {
             this.counters[stepIndex + 1].push(...expired)
             this.strictSums[stepIndex + 1][0] += upVolume
             this.strictSums[stepIndex + 1][1] += downVolume
+            this.strictSums[stepIndex + 1][2] += upMove
+            this.strictSums[stepIndex + 1][3] += downMove
 
             if (this.completed < stepIndex) {
               this.completed = stepIndex
@@ -234,13 +278,19 @@ export default {
         if (!this.cumulativeCounters) {
           stackedUpVolume = 0
           stackedDownVolume = 0
+          stackedUpMove = 0
+          stackedDownMove = 0
         }
 
         stackedUpVolume += this.strictSums[stepIndex][0]
         stackedDownVolume += this.strictSums[stepIndex][1]
+        stackedUpMove += this.strictSums[stepIndex][2]
+        stackedDownMove += this.strictSums[stepIndex][3]
 
-        this.$set(this.stackedSums[stepIndex], 0, parseFloat(stackedUpVolume))
-        this.$set(this.stackedSums[stepIndex], 1, parseFloat(stackedDownVolume))
+        this.$set(this.stackedSums[stepIndex], "volumeUp", parseFloat(stackedUpVolume))
+        this.$set(this.stackedSums[stepIndex], "volumeDown", parseFloat(stackedDownVolume))
+        this.$set(this.stackedSums[stepIndex], "moveUp", parseFloat(stackedUpMove))
+        this.$set(this.stackedSums[stepIndex], "moveDown", parseFloat(stackedDownMove))
 
         stepIndex++
       }
@@ -263,17 +313,20 @@ export default {
 
         const isBuy = +trade[4] > 0 ? true : false
         const amount = trade[3] * (this.preferQuoteCurrencySize ? trade[2] : 1)
-
+        const move = trade[6]
         if (
           stacks.length &&
           trade[1] - stacks[stacks.length - 1][0] < this.counterPrecision
         ) {
           stacks[stacks.length - 1][isBuy ? 1 : 2] += amount
+          stacks[stacks.length - 1][isBuy ? 3 : 4] += move
         } else {
           stacks.push([
             +trade[1],
             isBuy ? amount : 0,
             !isBuy ? amount : 0,
+            isBuy ? move : 0,
+            !isBuy ? move : 0
           ])
         }
       }
@@ -293,9 +346,9 @@ export default {
         for (let index = 0; index < this.countersSteps.length; index++) {
           if (stack[0] > now - this.countersSteps[index]) {
             this.counters[index].push(stack)
-            this.strictSums[index][0] += stack[1]
-            this.strictSums[index][1] += stack[2]
-
+            for(let i = 0; i < 4;++i) {
+              this.strictSums[index][i] += stack[i+1]
+            }
             break
           }
         }
@@ -303,6 +356,8 @@ export default {
 
       let stackedUpVolume = 0
       let stackedDownVolume = 0
+      let stackedUpMove = 0
+      let stackedDownMove = 0
       let completed = 0
 
       for (let index = 0; index < this.countersSteps.length; index++) {
@@ -311,13 +366,20 @@ export default {
         if (!this.cumulativeCounters) {
           stackedUpVolume = 0
           stackedDownVolume = 0
+          stackedUpMove = 0
+          stackedDownMove = 0
+
         }
 
         stackedUpVolume += this.strictSums[index][0]
         stackedDownVolume += this.strictSums[index][1]
+        stackedUpMove += this.strictSums[index][2]
+        stackedDownMove += this.strictSums[index][3]
 
-        this.$set(this.stackedSums[index], 0, parseFloat(stackedUpVolume))
-        this.$set(this.stackedSums[index], 1, parseFloat(stackedDownVolume))
+        this.$set(this.stackedSums[index], "volumeUp", parseFloat(stackedUpVolume))
+        this.$set(this.stackedSums[index], "volumeDown", parseFloat(stackedDownVolume))
+        this.$set(this.stackedSums[index], "moveUp", parseFloat(stackedUpMove))
+        this.$set(this.stackedSums[index], "moveDown", parseFloat(stackedDownMove))
 
         if (stacks[0][0] < now - this.countersSteps[index] * 0.99) {
           completed = index
@@ -367,8 +429,8 @@ export default {
       for (let i = 0; i < this.countersSteps.length; i++) {
         this.labels.push(this.$root.ago(now - this.countersSteps[i]))
         this.counters.push([])
-        this.strictSums.push([0, 0])
-        this.stackedSums.push([0, 0])
+        this.strictSums.push([0, 0,0,0])
+        this.stackedSums.push({volumeUp:0,volumeDown:0,moveUp:0,moveDown:0})
       }
 
       const trades = this.getTicksTrades()
@@ -474,6 +536,16 @@ export default {
       position: relative;
       align-items: stretch;
     }
+  }
+}
+
+.counter__row {
+  display: flex;
+  flex-basis: 100%;
+  flex-flow: column nowrap;
+  div {
+    display:flex;
+    flex-basis: 50%;
   }
 }
 
